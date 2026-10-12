@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>누구나기프트 제안서 만들기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
+<style>
+:root{
+  --navy:#292943; --teal:#4AB0B2; --teal-soft:#e6f4f4; --bg:#f4f5f8; --card:#fff;
+  --text:#1f2030; --muted:#6b6f80; --line:#e2e4ea; --red:#d64545; --sel:#fff8e6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+header{background:var(--navy);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:800;letter-spacing:-.3px}
+header .sp{flex:1}
+header label{font-size:13px;opacity:.9;display:flex;align-items:center;gap:6px}
+header input,header select{border:0;border-radius:6px;padding:6px 8px;font:inherit;color:var(--text)}
+header input[type=number]{width:64px}
+#title{width:200px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:6px 12px;color:var(--text)}
+button:hover{border-color:var(--teal)}
+button.primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:700}
+button.primary:hover{filter:brightness(.95)}
+button.small{padding:3px 8px;font-size:12px}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+#makeBtn{padding:9px 18px;font-size:15px}
+
+main{display:grid;grid-template-columns:minmax(0,.9fr) minmax(480px,1.25fr);gap:16px;padding:16px;height:calc(100vh - 58px)}
+.pane{background:var(--card);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;min-height:0}
+.pane-h{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pane-h h2{font-size:15px;margin:0;font-weight:800}
+.pane-b{flex:1;overflow:auto;min-height:0}
+
+#drop{margin:16px;border:2px dashed #c9ccd6;border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted);cursor:pointer}
+#drop.over{border-color:var(--teal);background:var(--teal-soft)}
+#drop b{color:var(--text);font-size:16px;display:block;margin-bottom:6px}
+.mode-badge{font-size:12px;padding:3px 8px;border-radius:20px;background:var(--teal-soft);color:#21797b;font-weight:700}
+.mode-badge.vendor{background:#fdeeee;color:var(--red)}
+
+#viewer{display:none;flex:1;min-height:0;grid-template-columns:92px 1fr;}
+#thumbs{overflow:auto;border-right:1px solid var(--line);padding:8px 6px}
+.th{cursor:pointer;margin-bottom:8px;text-align:center;font-size:11px;color:var(--muted)}
+.th canvas,.th img{width:100%;border:2px solid transparent;border-radius:4px;background:#fafafa;display:block;min-height:40px}
+.th.on canvas,.th.on img{border-color:var(--teal)}
+#pageArea{overflow:auto;padding:12px;min-height:0}
+#pageWrap{position:relative;display:inline-block;user-select:none;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+#pageWrap canvas{display:block}
+.ibox{position:absolute;border:2px solid rgba(74,176,178,.0);cursor:copy;border-radius:2px}
+.ibox:hover{border-color:var(--teal);background:rgba(74,176,178,.12)}
+.ibox:hover::after{content:"+ 사진 넣기";position:absolute;left:0;top:0;background:var(--teal);color:#fff;font-size:11px;padding:1px 5px}
+.pbox{position:absolute;border:2px dashed;border-radius:4px;pointer-events:none}
+.pbox span{position:absolute;left:-2px;top:-2px;color:#fff;font-size:11px;font-weight:800;padding:0 5px;border-radius:3px 0 3px 0;pointer-events:auto;cursor:pointer}
+#cropRect{position:absolute;border:2px dashed var(--red);background:rgba(214,69,69,.08);display:none;pointer-events:none}
+.found{border-top:1px solid var(--line);padding:10px 16px;max-height:34%;overflow:auto}
+.found h3{font-size:13px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.fitem{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.fitem .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fitem .p{color:var(--red);font-weight:700;white-space:nowrap}
+.fitem.added{opacity:.5}
+.hint{font-size:12px;color:var(--muted)}
+
+#list{padding:14px;display:flex;flex-direction:column;gap:18px}
+.empty{color:var(--muted);text-align:center;padding:60px 10px;line-height:1.8}
+.item{border-radius:10px}
+.slide{position:relative;width:100%;aspect-ratio:13.333/7.5;background:#fff;container-type:inline-size;overflow:hidden;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.02em}
+.item.sel .slide{outline:3px solid var(--teal);outline-offset:2px}
+.s-bar{position:absolute;left:0;top:0;width:100%;height:5.3cqw;background:var(--navy)}
+.s-logo{position:absolute;left:88.7cqw;top:4.58cqw;width:7.5cqw;height:7.9cqw}
+.s-title{position:absolute;left:5.93cqw;top:7.2cqw;width:80cqw;font-size:2.5cqw;font-weight:800;color:var(--navy);line-height:1.25;white-space:nowrap;overflow:hidden}
+.s-panel{position:absolute;left:57.45cqw;top:11.4cqw;width:37.5cqw}
+.s-sec{position:relative}
+.s-dot{position:absolute;left:-1.05cqw;top:1.3cqw;width:.65cqw;height:.65cqw;border-radius:50%;background:var(--teal)}
+.s-head{font-size:1.667cqw;font-weight:800;color:var(--navy);line-height:1.2;padding-top:.375cqw;height:2.78cqw;white-space:nowrap}
+.s-body{font-size:1.146cqw;font-weight:500;color:#7f7f7f;line-height:1.56;white-space:pre-wrap;padding-top:.375cqw;margin-bottom:.75cqw;min-height:1.5cqw}
+.s-sep{border-top:1px solid #d9d9d9;margin-bottom:.98cqw}
+.s-sec.blank{opacity:.35}
+[contenteditable]{outline:none;border-radius:2px;cursor:text}
+[contenteditable]:hover{background:rgba(74,176,178,.08)}
+[contenteditable]:focus{background:rgba(74,176,178,.14);box-shadow:0 0 0 1px var(--teal)}
+[contenteditable]:empty::before{content:attr(data-ph);color:#b8bcc8;font-weight:500}
+.s-bottom{position:absolute;left:57.45cqw;top:54.3cqw;width:37.5cqw;border-top:1px solid #d9d9d9}
+.s-ph{position:absolute}
+.s-ph img{width:100%;height:100%;display:block}
+.s-ph button{position:absolute;right:-.6cqw;top:-.6cqw;width:2.6cqw;height:2.6cqw;min-width:20px;min-height:20px;border-radius:50%;padding:0;font-size:13px;line-height:1;background:var(--navy);color:#fff;border:0;display:none}
+.s-ph:hover button{display:block}
+.s-noph{position:absolute;border:2px dashed #d5d8e0;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a0a4b0;font-size:1.6cqw;font-weight:700;text-align:center;gap:.8cqw}
+.s-noph small{font-size:1.15cqw;font-weight:500;line-height:1.5}
+.s-over{display:none;position:absolute;right:1cqw;bottom:.8cqw;background:var(--red);color:#fff;font-size:1.1cqw;padding:.3cqw .8cqw;border-radius:.5cqw}
+.slide.over .s-over{display:block}
+.filters{display:none;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);background:#fafbfc;font-size:13px}
+.filters.on{display:flex}
+.filters label{display:flex;align-items:center;gap:5px;color:var(--muted)}
+.filters input,.filters select{font:inherit;border:1px solid var(--line);border-radius:6px;padding:4px 8px;width:84px;color:var(--text);background:#fff}
+.filters select{width:auto;max-width:220px}
+.filters input:focus,.filters select:focus{outline:none;border-color:var(--teal)}
+#fInfo b{color:var(--teal)}
+.sbar .cat{font-size:11px;color:var(--muted);background:#f1f3f6;border-radius:4px;padding:2px 6px}
+.sbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 2px 0;font-size:13px}
+.sbar .no{color:var(--teal);font-size:15px;min-width:22px}
+.sbar label{display:flex;align-items:center;gap:4px;color:var(--muted)}
+.sbar input{font:inherit;border:1px solid var(--line);border-radius:6px;padding:4px 8px;width:96px;color:var(--text);font-weight:700}
+.sbar input[data-m=margin]{width:56px}
+.sbar input:focus{outline:none;border-color:var(--teal)}
+.sbar .op{color:var(--muted)}
+.sbar .calc{background:var(--teal-soft);color:#1d6e70;padding:4px 10px;border-radius:6px}
+.sbar .calc b{font-size:14px}
+.sbar .tag{background:#eef0f5;color:var(--muted);padding:4px 10px;border-radius:6px;font-size:12px}
+.sbar .sp{flex:1}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+#busy{position:fixed;inset:0;background:rgba(255,255,255,.7);display:none;align-items:center;justify-content:center;font-weight:700;z-index:8}
+@media (max-width:900px){main{grid-template-columns:1fr;height:auto}.pane{min-height:70vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>누구나기프트 제안서 만들기</h1>
+  <label>제안서 이름 <input id="title" placeholder="예: 네오다임"></label>
+  <span id="vendorCtl" style="display:none;gap:14px;align-items:center">
+    <label title="원청 자료 상품 전체에 바로 적용됩니다">기본 마진 <input id="margin" type="number" value="25" min="0" step="1">%</label>
+    <label>단가 올림 <select id="round"><option value="1">1원</option><option value="10">10원</option><option value="100" selected>100원</option><option value="1000">1,000원</option></select></label>
+  </span>
+  <span class="sp"></span>
+  <button class="primary" id="makeBtn">PPT 만들기</button>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-h">
+      <h2>자료</h2>
+      <span id="modeBadge" class="mode-badge" style="display:none"></span>
+      <select id="modeSel" style="display:none">
+        <option value="monthly">우리 월간지 (가격 그대로)</option>
+        <option value="vendor">원청·업체 자료 (원가 + 마진)</option>
+      </select>
+      <span class="sp" style="flex:1"></span>
+      <button class="small" id="addFile" style="display:none">+ 파일 더 넣기</button>
+    </div>
+    <div id="drop">
+      <b>파일을 여기에 끌어다 놓거나 눌러서 고르세요</b>
+      PDF · PPTX · 사진(JPG/PNG) 여러 개 가능<br>
+      넣자마자 제안서가 만들어지고, 각 장에서 바로 고칠 수 있어요<br>우리 월간지 → 책자 가격 그대로 · 원청·업체 제안서 → 원가에 마진
+    </div>
+    <input type="file" id="file" multiple accept=".pdf,.pptx,image/*" hidden>
+    <div id="viewer">
+      <div id="thumbs"></div>
+      <div style="display:flex;flex-direction:column;min-height:0">
+        <div id="pageArea">
+          <div class="hint" style="margin-bottom:6px">사진을 누르면 오른쪽에서 고른 장에 들어갑니다 · 사진이 안 잡히면 마우스로 네모를 그려 잘라 넣으세요</div>
+          <div id="pageWrap"><canvas id="pageCanvas"></canvas><div id="cropRect"></div></div>
+        </div>
+        <div class="found" id="found"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-h">
+      <h2>제안서 미리보기 <span id="count" style="color:var(--teal)"></span></h2>
+      <span class="hint">PPT에 나올 모습 그대로예요 · 글자를 눌러 바로 고치세요</span>
+      <span class="sp" style="flex:1"></span>
+      <button class="small" id="sortBtn">싼 순서로 정렬</button>
+      <button class="small" id="addBlank">+ 빈 장</button>
+      <button class="small ghost" id="clearAll">모두 지우기</button>
+    </div>
+    <div class="filters" id="filters">
+      <label>카테고리 <select id="fCat"><option value="">전체</option></select></label>
+      <label>가격 <input id="fMin" inputmode="numeric" placeholder="최소">~<input id="fMax" inputmode="numeric" placeholder="최대">원</label>
+      <label><input id="fQ" placeholder="상품명 검색" style="width:130px"></label>
+      <button class="small ghost" id="fReset">필터 해제</button>
+      <span class="hint" id="fInfo"></span>
+    </div>
+    <div class="pane-b"><div id="list"></div></div>
+  </section>
+</main>
+<input type="file" id="photoFile" accept="image/*" multiple hidden>
+<div id="toast"></div>
+<div id="busy">불러오는 중…</div>
+
+<script>
+"use strict";
+const LOGO = "data:image/jpeg;base64,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";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = s => document.querySelector(s);
+const state = { pages: [], cur: -1, products: [], sel: null, mode: null, seq: 1 };
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("on"),2200); }
+function busy(on, msg){ const b=$("#busy"); b.textContent=msg||"불러오는 중…"; b.style.display=on?"flex":"none"; }
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------------- 파일 넣기 ---------------- */
+const drop=$("#drop");
+drop.onclick=()=>$("#file").click();
+$("#addFile").onclick=()=>$("#file").click();
+["dragover","dragenter"].forEach(e=>document.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>document.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
+document.addEventListener("drop",ev=>{ if(ev.dataTransfer.files.length) handleFiles([...ev.dataTransfer.files]); });
+$("#file").onchange=e=>{ handleFiles([...e.target.files]); e.target.value=""; };
+
+async function handleFiles(files){
+  busy(true);
+  const start=state.pages.length;
+  try{
+    for(const f of files){
+      const n=f.name.toLowerCase();
+      if(n.endsWith(".pdf")) await loadPdf(f);
+      else if(n.endsWith(".pptx")) await loadPptx(f);
+      else if(f.type.startsWith("image/")) await loadImageFile(f);
+      else toast(`${f.name}: 지원하지 않는 형식이에요 (PDF·PPTX·사진만)`);
+    }
+  }catch(err){ console.error(err); toast("파일을 여는 중 문제가 생겼어요: "+err.message); }
+  busy(false);
+  if(state.pages.length===start) return;
+  await detectMode(start);
+  drop.style.display="none"; $("#viewer").style.display="grid"; $("#addFile").style.display="";
+  buildThumbs();
+  await showPage(start);
+  await autoExtract(start);   // 월간지·원청 자료 모두 넣자마자 제안서로
+}
+
+async function detectMode(start){
+  // 우리 월간지는 거의 모든 쪽 아래에 누구나기프트 주소·사이트가 찍혀 있다
+  // (앞쪽 몇 장을 미리 읽어 두면 반복되는 꼬리말 로고도 가려낼 수 있다)
+  let hit=0, n=0;
+  for(let i=start;i<Math.min(state.pages.length,start+6);i++){
+    const pg=state.pages[i]; await ensureParsed(pg); n++;
+    if(/nugunagift|누\s*구\s*나\s*기\s*프\s*트/.test(pg.lines.map(l=>l.text).join(" "))) hit++;
+  }
+  if(!state.mode) setMode(n && hit/n>=0.5 ? "monthly" : "vendor");
+}
+function setMode(m){
+  state.mode=m;
+  const b=$("#modeBadge"); b.style.display=""; $("#modeSel").style.display=""; $("#modeSel").value=m;
+  b.className="mode-badge"+(m==="vendor"?" vendor":"");
+  b.textContent=m==="monthly"?"월간지: 가격 그대로":"원청 자료: 원가 + 마진";
+  $("#vendorCtl").style.display=m==="vendor"?"flex":"none";
+}
+$("#modeSel").onchange=async e=>{
+  const m=e.target.value; setMode(m); state.products.forEach(applyMode);
+  if(!state.products.length&&state.pages.length) await autoExtract(0);
+  else renderList();
+  renderFound();
+  toast(m==="monthly"?"월간지로 바꿨어요: 마진 없이 책자 가격 그대로":"원청 자료로 바꿨어요: 원가에 마진을 붙입니다");
+};
+
+/* ---------------- PDF ---------------- */
+async function loadPdf(file){
+  const doc=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  for(let i=1;i<=doc.numPages;i++) state.pages.push({kind:"pdf",file:file.name,doc,num:i});
+}
+const mul=(a,b)=>pdfjsLib.Util.transform(a,b);
+
+async function parsePdfPage(pg){
+  const page=await pg.doc.getPage(pg.num); pg.page=page;
+  const vp=page.getViewport({scale:1}); pg.w=vp.width; pg.h=vp.height;
+  // 글자
+  const tc=await page.getTextContent();
+  const items=[];
+  for(const it of tc.items){
+    if(!it.str||!it.str.trim()) continue;
+    const m=mul(vp.transform,it.transform);
+    const size=Math.hypot(m[2],m[3])||10;
+    items.push({text:it.str,x:m[4],base:m[5],size,x1:m[4]+(it.width||size*it.str.length*0.8)});
+  }
+  pg.lines=groupLines(items);
+  // 사진: 그리기 명령을 따라가며 위치를 계산
+  const ol=await page.getOperatorList(); const O=pdfjsLib.OPS;
+  let ctm=[1,0,0,1,0,0]; const st=[]; const imgs=[];
+  for(let i=0;i<ol.fnArray.length;i++){
+    const fn=ol.fnArray[i], a=ol.argsArray[i];
+    if(fn===O.save) st.push(ctm);
+    else if(fn===O.restore) ctm=st.pop()||ctm;
+    else if(fn===O.transform) ctm=mul(ctm,a);
+    else if(fn===O.paintFormXObjectBegin){ st.push(ctm); if(a&&a[0]) ctm=mul(ctm,a[0]); }
+    else if(fn===O.paintFormXObjectEnd) ctm=st.pop()||ctm;
+    else if(fn===O.paintImageXObject||fn===O.paintInlineImageXObject){
+      const m=mul(vp.transform,ctm);
+      const pts=[[0,0],[1,0],[0,1],[1,1]].map(([x,y])=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]]);
+      const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+      const bb={x0:Math.max(0,Math.min(...xs)),y0:Math.max(0,Math.min(...ys)),x1:Math.min(vp.width,Math.max(...xs)),y1:Math.min(vp.height,Math.max(...ys))};
+      const w=bb.x1-bb.x0, h=bb.y1-bb.y0, cy=(bb.y0+bb.y1)/2;
+      if(w<40||h<40) continue;                          // 아이콘·장식
+      if(cy<vp.height*0.07||cy>vp.height*0.9) continue; // 머리말·꼬리말 로고
+      imgs.push({...bb, ref: fn===O.paintImageXObject ? a[0] : a[0]});
+    }
+  }
+  // 같은 사진이 두 번 그려진 경우 하나만
+  pg.allImages=imgs.filter((b,i)=>!imgs.slice(0,i).some(c=>Math.abs(c.x0-b.x0)<2&&Math.abs(c.y0-b.y0)<2&&Math.abs(c.x1-b.x1)<2));
+  // 여러 쪽의 같은 자리에 반복되는 그림(꼬리말 로고 등)을 세어 둔다
+  const cnt=pg.doc._sig||(pg.doc._sig={});
+  for(const b of pg.allImages){ b.sig=[b.x0,b.y0,b.x1,b.y1].map(Math.round).join(","); cnt[b.sig]=(cnt[b.sig]||0)+1; }
+  pg.images=pg.allImages;
+}
+function dropRepeated(pg){
+  if(pg.kind!=="pdf"||pg.found) return;
+  const cnt=pg.doc._sig||{};
+  // 여러 쪽 같은 자리에 반복되는 '작은' 그림만 로고로 본다 (상품 사진은 크기가 커서 제외)
+  pg.images=pg.allImages.filter(b=>(cnt[b.sig]||0)<3||areaOf(b)>pg.w*pg.h*0.06);
+}
+
+const PRICE_ITEM=/^(\d{1,3}(,\d{3})+|\d{3,})\s*원$|^\d{1,3}(,\d{3})+$/;   // "22,000" / "1500원" (그냥 "304"는 아님)
+function groupLines(items){
+  items.sort((a,b)=>a.base-b.base||a.x-b.x);
+  const lines=[];
+  for(const it of items){
+    const itPrice=PRICE_ITEM.test(it.text.trim());
+    const ln=lines.find(l=>Math.abs(l.base-it.base)<it.size*0.45 && it.x>=l.x0-2 && it.x-l.x1<it.size*0.6
+      && !(itPrice && it.x-l.x1>it.size*0.15) && !(l.isPrice && it.x-l.x1>it.size*0.15));  // 가격은 옆 글과 붙이지 않는다
+    if(ln){
+      if(it.x-ln.x1>it.size*0.08 && !ln.text.endsWith(" ") && !it.text.startsWith(" ")) ln.text+=" ";
+      ln.text+=it.text; ln.x1=Math.max(ln.x1,it.x1); ln.size=Math.max(ln.size,it.size); ln.items.push(it);
+    } else lines.push({text:it.text,x0:it.x,x1:it.x1,base:it.base,size:it.size,items:[it],isPrice:itPrice});
+  }
+  for(const l of lines){ l.text=l.text.replace(/[\u0000-\u001f]/g," ").replace(/\s+/g," ").trim(); l.top=l.base-l.size; l.bottom=l.base+l.size*0.25; }
+  return lines.filter(l=>l.text);
+}
+
+// 사진 원본 꺼내기 (안 되면 화면을 잘라낸다)
+function getObj(page,id){
+  return new Promise(res=>{
+    const objs=String(id).startsWith("g_")?page.commonObjs:page.objs;
+    try{ objs.get(id,res); }catch(e){ res(null); }
+    setTimeout(()=>res(null),4000);
+  });
+}
+function objToCanvas(o){
+  if(!o||!o.width) return null;
+  const cv=document.createElement("canvas"); cv.width=o.width; cv.height=o.height;
+  const ctx=cv.getContext("2d");
+  if(o.bitmap){ ctx.drawImage(o.bitmap,0,0); return cv; }
+  if(!o.data) return null;
+  const id=ctx.createImageData(o.width,o.height), s=o.data, d=id.data;
+  if(o.kind===3) d.set(s.subarray(0,d.length));
+  else if(o.kind===2){ for(let i=0,j=0;j<d.length;i+=3,j+=4){d[j]=s[i];d[j+1]=s[i+1];d[j+2]=s[i+2];d[j+3]=255;} }
+  else if(o.kind===1){ const rb=(o.width+7)>>3; for(let y=0;y<o.height;y++)for(let x=0;x<o.width;x++){const v=(s[y*rb+(x>>3)]>>(7-(x&7)))&1?255:0;const j=(y*o.width+x)*4;d[j]=d[j+1]=d[j+2]=v;d[j+3]=255;} }
+  else return null;
+  ctx.putImageData(id,0,0); return cv;
+}
+async function renderRegion(pg,bb,scale=3){
+  const page=pg.page||await pg.doc.getPage(pg.num);
+  const vp=page.getViewport({scale});
+  const cv=document.createElement("canvas"); cv.width=Math.ceil((bb.x1-bb.x0)*scale); cv.height=Math.ceil((bb.y1-bb.y0)*scale);
+  const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+  await page.render({canvasContext:ctx,viewport:vp,transform:[1,0,0,1,-bb.x0*scale,-bb.y0*scale]}).promise;
+  return cv;
+}
+async function imageOf(pg,img){
+  if(img.data) return img.data;            // 사진 파일·PPTX
+  if(img.photo) return img.photo;
+  let cv=null;
+  if(typeof img.ref==="string"){ try{ cv=objToCanvas(await getObj(pg.page,img.ref)); }catch(e){} }
+  else if(img.ref&&img.ref.width){ cv=objToCanvas(img.ref); }
+  if(!cv||cv.width<60) cv=await renderRegion(pg,img);
+  img.photo=canvasToPhoto(cv);
+  return img.photo;
+}
+function canvasToPhoto(src,maxPx=1600){
+  const s=Math.min(1,maxPx/Math.max(src.width,src.height));
+  const cv=document.createElement("canvas"); cv.width=Math.round(src.width*s); cv.height=Math.round(src.height*s);
+  const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height); // 투명 배경은 흰색
+  ctx.drawImage(src,0,0,cv.width,cv.height);
+  return {url:cv.toDataURL("image/jpeg",0.9),w:cv.width,h:cv.height};
+}
+
+/* ---------------- PPTX ---------------- */
+async function loadPptx(file){
+  const zip=await JSZip.loadAsync(await file.arrayBuffer());
+  const xml=async p=>new DOMParser().parseFromString(await zip.file(p).async("string"),"application/xml");
+  const pres=await xml("ppt/presentation.xml");
+  const sz=pres.getElementsByTagName("p:sldSz")[0];
+  const W=+sz.getAttribute("cx"), H=+sz.getAttribute("cy");
+  const rels=await xml("ppt/_rels/presentation.xml.rels");
+  const relMap={}; for(const r of rels.getElementsByTagName("Relationship")) relMap[r.getAttribute("Id")]=r.getAttribute("Target");
+  const ids=[...pres.getElementsByTagName("p:sldId")].map(e=>e.getAttribute("r:id"));
+  const EMU=12700; // 1pt
+  let n=0;
+  for(const rid of ids){
+    n++;
+    const path="ppt/"+relMap[rid].replace(/^\/?ppt\//,"");
+    const doc=await xml(path);
+    const relPath=path.replace(/slides\/(slide\d+\.xml)$/,"slides/_rels/$1.rels");
+    const srels={}; if(zip.file(relPath)) for(const r of (await xml(relPath)).getElementsByTagName("Relationship")) srels[r.getAttribute("Id")]=r.getAttribute("Target");
+    const items=[], imgs=[];
+    // 그룹 좌표 변환을 따라가며 도형 위치를 구한다
+    async function walk(node,tf){
+      for(const el of node.children){
+        const tag=el.tagName;
+        if(tag==="p:grpSp"){
+          const x=el.getElementsByTagName("a:xfrm")[0]; let t=tf;
+          if(x){ const g=k=>x.getElementsByTagName(k)[0]; const off=g("a:off"),ext=g("a:ext"),co=g("a:chOff"),ce=g("a:chExt");
+            if(off&&ext&&co&&ce){ const sx=(+ext.getAttribute("cx")||1)/(+ce.getAttribute("cx")||1), sy=(+ext.getAttribute("cy")||1)/(+ce.getAttribute("cy")||1);
+              const ox=+off.getAttribute("x"),oy=+off.getAttribute("y"),cx=+co.getAttribute("x"),cy=+co.getAttribute("y");
+              t=p=>tf({x:ox+(p.x-cx)*sx,y:oy+(p.y-cy)*sy,w:p.w*sx,h:p.h*sy}); } }
+          await walk(el,t);
+        } else if(tag==="p:sp"||tag==="p:pic"){
+          const xf=el.getElementsByTagName("a:xfrm")[0];
+          const off=xf&&xf.getElementsByTagName("a:off")[0], ext=xf&&xf.getElementsByTagName("a:ext")[0];
+          if(!off||!ext) continue;
+          const r=tf({x:+off.getAttribute("x"),y:+off.getAttribute("y"),w:+ext.getAttribute("cx"),h:+ext.getAttribute("cy")});
+          if(tag==="p:sp"){
+            let y=r.y/EMU+4;
+            for(const p of el.getElementsByTagName("a:p")){
+              const t=[...p.getElementsByTagName("a:t")].map(e=>e.textContent).join("");
+              const rp=p.getElementsByTagName("a:rPr")[0]; const size=rp&&rp.getAttribute("sz")?+rp.getAttribute("sz")/100:14;
+              if(t.trim()) items.push({text:t.replace(/\s+/g," ").trim(),x0:r.x/EMU+4,x1:(r.x+r.w)/EMU,top:y,base:y+size,bottom:y+size*1.25,size});
+              y+=size*1.3;
+            }
+          } else {
+            const blip=el.getElementsByTagName("a:blip")[0]; const rid2=blip&&blip.getAttribute("r:embed");
+            if(!rid2||!srels[rid2]) continue;
+            const mp="ppt/"+srels[rid2].replace(/^\.\.\//,"");
+            const f=zip.file(mp); if(!f||!/\.(png|jpe?g|gif|bmp|webp)$/i.test(mp)) continue;
+            const b64=await f.async("base64"); const ext2=mp.split(".").pop().toLowerCase().replace("jpg","jpeg");
+            const x0=r.x/EMU,y0=r.y/EMU,x1=(r.x+r.w)/EMU,y1=(r.y+r.h)/EMU;
+            if(x1-x0<30||y1-y0<30) continue;
+            imgs.push({x0,y0,x1,y1,src:`data:image/${ext2};base64,${b64}`});
+          }
+        }
+      }
+    }
+    const tree=doc.getElementsByTagName("p:spTree")[0];
+    await walk(tree,p=>p);
+    // 모든 슬라이드에 있는 같은 위치·같은 그림(로고)은 뺀다
+    state.pages.push({kind:"pptx",file:file.name,num:n,w:W/EMU,h:H/EMU,lines:items,images:imgs,rawImages:true});
+  }
+  const pp=state.pages.filter(p=>p.file===file.name&&p.kind==="pptx");
+  if(pp.length>=3){
+    const key=i=>`${Math.round(i.x0)},${Math.round(i.y0)},${i.src.length}`;
+    const cnt={}; pp.forEach(p=>new Set(p.images.map(key)).forEach(k=>cnt[k]=(cnt[k]||0)+1));
+    pp.forEach(p=>p.images=p.images.filter(i=>cnt[key(i)]<pp.length*0.6));
+  }
+  for(const p of pp) for(const i of p.images) i.data=await loadPhoto(i.src);
+}
+function loadPhoto(src){
+  return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(canvasToPhoto(im)); im.onerror=()=>rej(new Error("사진을 읽지 못했어요")); im.src=src; });
+}
+async function loadImageFile(file){
+  const src=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(file);});
+  const ph=await loadPhoto(src);
+  state.pages.push({kind:"image",file:file.name,num:1,w:ph.w,h:ph.h,lines:[],images:[{x0:0,y0:0,x1:ph.w,y1:ph.h,data:ph}],parsed:true,src:ph.url});
+}
+
+async function ensureParsed(pg){
+  if(pg.parsed) return;
+  if(pg.kind==="pdf") await parsePdfPage(pg);
+  pg.parsed=true;
+}
+
+/* ---------------- 상품 찾기 ---------------- */
+const RE_PRICE=/^[₩\\]?\s*\d{1,3}(,\d{3})+\s*원?$|^\d{3,7}\s*원$/;
+const isPrice=l=>RE_PRICE.test(l.text.replace(/\s/g,"")) && !/소비자|정가|시중/.test(l.text);
+const isBox=l=>l.text.length<20&&/^\(?\s*(\d+\s*박스|박스\s*\d|\d+\s*개입|입수)/.test(l.text.trim());  // "1박스 10개입" 같은 줄 (상품명 속 "7개입"은 제외)
+const num=s=>{ const m=String(s).replace(/,/g,"").match(/\d+/); return m?+m[0]:null; };
+const rectDist=(a,b)=>Math.hypot(Math.max(0,a.x0-b.x1,b.x0-a.x1),Math.max(0,a.y0-b.y1,b.y0-a.y1));
+
+function findProducts(pg){
+  if(pg.found) return pg.found;
+  // 월간지는 아래쪽에 회사 주소 꼬리말이 있어 잘라내고, 원청 자료는 맨 아래 가격까지 읽는다
+  const H=pg.h, bottom=state.mode==="monthly"?0.9:0.985;
+  const body=pg.lines.filter(l=>l.top>H*0.06&&l.top<H*bottom&&!/^-\s*\d+\s*-$/.test(l.text));
+  // 원청 자료에서 가격이 하나뿐인 쪽은 '한 쪽 = 상품 하나' 형식(네오다임 같은 제안서)
+  const nPrice=new Set(body.filter(l=>priceOf(l)).map(l=>priceOf(l))).size;
+  let found=state.mode!=="monthly"&&nPrice<=1?findSinglePageProduct(pg,body):findBracketProducts(pg,body);
+  if(!found.length&&state.mode!=="monthly") found=findSinglePageProduct(pg,body);
+  pg.found=found;
+  return found;
+}
+
+// 월간지 형식: [브랜드] 상품명 + 빨간 가격
+// 상품명 = 가격 바로 위의 큰 글씨 줄 (월간지는 상품명 11~12pt, 설명·가격 9~10pt)
+const PRICE_PREFIX=/^(공급\s*가격?|판매\s*가격?|납품가|단가|가격|개당|할인가|특가|행사가)\s*[:：]?\s*/;
+const priceOf=l=>{ const t=l.text.replace(PRICE_PREFIX,""); if(!RE_PRICE.test(t.replace(/\s/g,""))||/소비자|정가|시중/.test(l.text)) return null; const v=t.replace(/\s/g,""); return /원$/.test(v)?v:v+"원"; };
+const isJunk=t=>/^[●■◆▶※☆★○◇□-]/.test(t)||/^[①-⑳]$/.test(t)||/nugunagift|누구나\s*기프트|사업자등록번호|주소\s*:|문의\s*:|www\./.test(t);
+const hOverlap=(t,l,pad)=>l.x0>=t.x0-pad&&l.x0<=t.x1+pad;
+function splitByPrices(t,prices){
+  if(!t.items||t.items.length<2) return [t];
+  const below=prices.filter(p=>p.top>t.top&&p.top-t.top<70&&p.x1>t.x0&&p.x0<t.x1+40).sort((a,b)=>a.x0-b.x0);
+  if(below.length<2) return [t];
+  const its=[...t.items].sort((a,b)=>a.x-b.x);
+  // 두 가격 사이 구간에서, 숫자·괄호로 시작하지 않는 조각 앞의 가장 넓은 틈을 자른다
+  const cuts=[];
+  for(let k=0;k<below.length-1;k++){
+    let best=-1,bg=-1e9;
+    for(let i=1;i<its.length;i++){
+      const x=its[i].x; if(x<=below[k].x0||x>=below[k+1].x0) continue;
+      if(/^[\d(.,x×*+\/~\-]/i.test(its[i].text.trim())) continue;
+      const gap=its[i].x-its[i-1].x1; if(gap>bg){bg=gap;best=i;}
+    }
+    if(best>0) cuts.push(best);
+  }
+  if(!cuts.length) return [t];
+  const groups=[]; let st=0;
+  for(const c of [...new Set(cuts)].sort((a,b)=>a-b)){ groups.push(its.slice(st,c)); st=c; }
+  groups.push(its.slice(st));
+  return groups.filter(g=>g.length).map(g=>{
+    let text=""; g.forEach((it,i)=>{ if(i&&it.x-g[i-1].x1>it.size*0.08&&!text.endsWith(" ")) text+=" "; text+=it.text; });
+    return {...t,_orig:t,items:g,x0:Math.min(...g.map(i=>i.x)),x1:Math.max(...g.map(i=>i.x1)),text:text.replace(/\s+/g," ").trim()};
+  });
+}
+function findBracketProducts(pg,body){
+  const prices=body.filter(l=>priceOf(l));
+  if(!prices.length) return [];
+  let titles=body.filter(l=>l.size>=10.8&&l.size<=22&&l.text.length>=2&&!priceOf(l)&&!isBox(l)&&!isJunk(l.text)&&!/^\|/.test(l.text)&&!HEADS.some(([,re])=>re.test(l.text.trim())&&l.text.length<=14));
+  titles=titles.flatMap(t=>splitByPrices(t,prices));
+  titles=titles.map(t=>({...t,name:t.text,parts:[t],prices:[],box:[],comp:[],desc:[]}));
+  // [브랜드] 만 있는 줄은 바로 아래 줄을 이어 붙인다
+  const merged=new Set();
+  for(const t of titles){
+    if(merged.has(t)||!/^\[[^\]]*\]\s*$/.test(t.text)) continue;
+    const nx=titles.filter(u=>u!==t&&u.top>t.top&&u.top-t.bottom<t.size*1.2&&Math.abs(u.x0-t.x0)<8).sort((a,b)=>a.top-b.top)[0];
+    if(nx){ t.name=t.text+" "+nx.text; t.parts.push(...nx.parts); t.x1=Math.max(t.x1,nx.x1); merged.add(nx); }
+  }
+  titles=titles.filter(t=>!merged.has(t));
+  // 가격마다 바로 위(가까운) 상품명을 찾는다
+  for(const t of titles){ const r=titles.filter(u=>u!==t&&Math.abs(u.top-t.top)<40&&u.x0>t.x0+20).map(u=>u.x0); t.colEnd=r.length?Math.min(...r)-2:pg.w; }
+  const nearestTitle=(l,maxUp)=>titles.filter(t=>t.top<l.top-1&&l.top-t.top<maxUp&&l.x0>=t.x0-40&&l.x0<t.colEnd)
+    .sort((a,b)=>(l.top-a.top)-(l.top-b.top)||Math.abs(a.x0-l.x0)-Math.abs(b.x0-l.x0))[0];
+  const orphans=[];
+  for(const l of prices){ const t=nearestTitle(l,130); if(t) t.prices.push(l); else orphans.push(l); }
+  // 위아래로 붙은 상품명(2p/3p)은 가격을 나눠 갖고 설명을 같이 쓴다
+  const sorted=[...titles].sort((a,b)=>a.top-b.top);
+  for(const t of sorted){
+    const u=sorted.find(v=>v!==t&&v.top>t.top&&v.top-t.top<70&&Math.abs(v.x0-t.x0)<30);
+    if(u&&!t.prices.length&&u.prices.length>=2){ u.prices.sort((a,b)=>a.top-b.top); t.prices.push(u.prices.shift()); t._shareWith=u; }
+  }
+  // 상품명 없는 가격: 바로 위 글줄을 이름으로
+  for(const l of orphans){
+    const above=body.filter(x=>x!==l&&!priceOf(x)&&!isBox(x)&&x.top<l.top-1&&l.top-x.top<45&&hOverlap(x,l,60)).sort((a,b)=>b.top-a.top);
+    if(!above.length){
+      // 가까운 글이 없으면 그 구역의 제목(● …)을 이름으로
+      const head=body.filter(x=>/^[●■◆]/.test(x.text)&&x.top<l.top).sort((a,b)=>b.top-a.top)[0];
+      if(head) titles.push({...head,name:head.text.replace(/^[●■◆]\s*/,"").split("|").pop().trim(),parts:[head],prices:[l],box:[],comp:[],desc:[]});
+      continue;
+    }
+    const t={...above[0],name:above[0].text.replace(/^[●■◆▶※☆★○◇□]\s*/,""),parts:[above[0]],prices:[l],box:[],comp:[],desc:[]};
+    const up=body.find(x=>x!==above[0]&&!priceOf(x)&&above[0].top-x.top>0&&above[0].top-x.top<x.size*1.6&&Math.abs(x.x0-above[0].x0)<6);
+    if(up){ t.name=up.text+" "+t.name; t.parts.unshift(up); t.top=up.top; }
+    titles.push(t);
+  }
+  const prods=titles.filter(t=>t.prices.length);
+  if(!prods.length) return [];
+  // 나머지 글줄(구성·설명·입수)은 칸이 맞는 가장 가까운 위쪽 상품에
+  for(const t of prods){
+    const right=prods.filter(u=>u!==t&&Math.abs(u.top-t.top)<40&&u.x0>t.x0+20).map(u=>u.x0);
+    t.cx0=t.x0-28; t.cx1=right.length?Math.min(...right)-4:pg.w;
+  }
+  for(const t of prods){
+    const inCol=y=>y.x0>=t.cx0&&y.x0<t.cx1;
+    const nextT=prods.filter(u=>u!==t&&u.top>t.top+4&&inCol(u)).map(u=>u.top);
+    const nextI=pg.images.filter(im=>im.y0>t.top+4&&(im.x0+im.x1)/2>=t.cx0&&(im.x0+im.x1)/2<t.cx1).map(im=>im.y0);
+    t.limit=Math.min(t.top+260,...nextT,...nextI);
+  }
+  const used=new Set(prods.flatMap(t=>[...t.parts,...t.prices]));
+  for(const l of body){
+    if(used.has(l)||priceOf(l)||isJunk(l.text)) continue;
+    if(titles.some(t=>t.parts.includes(l)||t._orig===l)) continue;
+    const t=prods.filter(t=>l.x0>=t.cx0&&l.x0<t.cx1&&t.top<=l.top+4&&l.top<t.limit).sort((a,b)=>b.top-a.top)[0];
+    if(!t) continue;
+    if(isBox(l)&&l.text.length<16) t.box.push(l); else (t._rest=t._rest||[]).push(l);
+  }
+  for(const t of prods){
+    let mode="desc";
+    for(const l of (t._rest||[]).sort((a,b)=>a.top-b.top||a.x0-b.x0)){
+      const h=l.text.replace(/^\|\s*/,"");
+      if(/^\|/.test(l.text)&&h.length<12){ mode=/구성/.test(h)?"comp":"desc"; continue; }
+      (mode==="comp"?t.comp:t.desc).push(l.text);
+    }
+  }
+  for(const t of prods) if(t._shareWith&&!t.desc.length&&!t.comp.length){ t.desc=[...t._shareWith.desc]; t.comp=[...t._shareWith.comp]; }
+  // 사진은 가장 가까운 상품에
+  const blocks=prods.map(t=>{ const ls=[...t.parts,...t.prices,...t.box];
+    return {x0:Math.min(...ls.map(l=>l.x0)),x1:Math.max(...ls.map(l=>l.x1)),y0:Math.min(...ls.map(l=>l.top)),y1:Math.max(...ls.map(l=>l.bottom))}; });
+  const photoIdx=prods.map(()=>[]);
+  pg.images.forEach((im,i)=>{
+    const cx=(im.x0+im.x1)/2, w=im.x1-im.x0;
+    // 1) 사진 바로 아래(같은 칸)에 있는 상품명
+    let best=-1,bd=1e9;
+    prods.forEach((t,k)=>{
+      const ov=Math.min(im.x1,t.x1+30)-Math.max(im.x0,t.x0-30);
+      if(ov<Math.min(w,t.x1-t.x0)*0.4) return;
+      const d=t.top-im.y1; if(d>=-25&&d<90&&d<bd){bd=d;best=k;}
+    });
+    // 2) 없으면 가장 가까운 상품 (옆에 사진이 있는 목록형 쪽)
+    if(best<0){ bd=1e9; blocks.forEach((b,k)=>{ const d=rectDist(im,b); if(d<bd){bd=d;best=k;} }); if(bd>=120) best=-1; }
+    if(best>=0) photoIdx[best].push(i);
+  });
+  const heads=body.filter(l=>/^[●■◆]/.test(l.text));
+  const catOf=t=>{ const h=heads.filter(x=>x.top<=t.top+2).sort((a,b)=>b.top-a.top)[0]||heads[0];
+    return categorize(t.name)||categorize(h?h.text:"")||"기타"; };
+  return prods.sort((a,b)=>a.top-b.top||a.x0-b.x0).map(t=>({
+    cat:catOf(t),
+    name:t.name.replace(/\s+/g," ").trim(),
+    comp:t.comp.join(", "),
+    desc:cleanDesc(t.desc,t.box.map(b=>b.text),prods.map(u=>u.name)),
+    priceText:t.prices.sort((a,b)=>a.top-b.top).map(priceOf).join(" / "),
+    cost:num(priceOf(t.prices[0])),
+    images:photoIdx[prods.indexOf(t)].sort((a,b)=>areaOf(pg.images[b])-areaOf(pg.images[a])).slice(0,4),
+    block:unionRect([blocks[prods.indexOf(t)],...photoIdx[prods.indexOf(t)].map(i=>pg.images[i])]),
+  }));
+}
+function cleanDesc(lines,box,names){
+  const seen=new Set(), out=[];
+  for(let l of lines){
+    l=l.replace(/^[•·\-*]\s*/,"").replace(/\s+/g," ").trim();
+    if(!l||l.length<2||seen.has(l)) continue;
+    if(names.some(n=>n&&(n===l||n.includes(l)&&l.length>6))) continue;   // 다른 상품 이름 조각
+    if(/[\d,]{3,}\s*원/.test(l)&&!/소비자|정가/.test(l)) continue;           // 다른 가격이 섞인 줄
+    seen.add(l); out.push(l.length>48?l.slice(0,47)+"…":l);
+  }
+  const ub=[...new Set(box)];
+  const b=ub.length>1&&!/개입|세트|개$/.test(ub[0])?[ub.join(" ")]:ub.slice(0,1);   // "1박스" + "100개입"이 따로 읽힌 경우 합치기
+  return [...out.slice(0,5-b.length),...b].join("\n");
+}
+// 상품 종류로 카테고리를 나눈다 (상품명 먼저, 없으면 책자 구역 제목으로)
+const CATS=[
+  ["골프",/골프|타이틀리스트|퍼팅|볼마커|켈러웨이|골든볼|홀인원/],
+  ["인쇄·문구",/달력|카렌다|다이어리|가계부|주력|명함|볼펜|인쇄|화환|꽃다발|노트/],
+  ["가전",/충전|무선|USB|블루투스|스피커|보조배터리|가전|청소기|가습기|에어프라이어|밥솥|냉장고|전자레인지|토스터|마사지기|헤어랩|스타일러|라디에이터|살균기|저울|무드등|두유메이커|카본매트|탄소매트|전기|그릴/],
+  ["캠핑·여행",/기내용|인치|캠핑|텐트|체어|피크닉|롤\s*테이블|웨건|캐리어|여행|레디백|파우치|블랭킷|버너/],
+  ["침구·계절",/이불|담요|패드|베개|침구|토퍼|조끼|방한|핫팩|발열|무릎/],
+  ["뷰티·바디",/마사지\s*크림|애경|브리쓰|구강|핸드크림|샴푸|바디|로션|립|샤워|화장|향수|뚜왈렛|퍼퓸|오드|PDRN|클렌|에센스|토너|앰플|세럼|마스크팩|치약|칫솔|덴탈|설화수|록시땅|더바디샵|요아럽|미스트|헤어케어/i],
+  ["식품",/천연당|퓨레|혼식|잡곡|식품|간식|과자|쿠키|젤리|커피|꿀|홍삼|정관장|육포|와인|올리브|오일|포도씨유|아보카도유|누룽지|국수|쌀|경기미|견과|빵|갈비|굴비|한우|소금|참치액|간장|전복장|게장|유자|원액|전병|크래커|고구마|칩|진액|버섯|알밤|단호박|청국장|스틱|차\s*\d|생강차|율무차|쌍화차|흑마늘|김자반|카레|육수|콜라겐|유산균|오쏘몰|과일|타르트|꽈배기|부각|두부|선물세트\s*\d*호?$/],
+  ["주방",/김장|쓰레기통|코스터|보냉백|홈세트|Casserole|도자기|주방|냄비|팬|도마|칼|나이프|믹싱볼|찬통|김치통|밀폐|용기|접시|머그|컵|텀블러|쉐이커|그릇|면기|찜기|계량|가위|행주|고무장갑|롤백|크린백|랩|위생|조리도구|앞치마|밧드|스피너|트레이|케틀|글라스|쿡밥|스팀|에그/],
+  ["생활",/방향제|소독|세정|신사|숙녀|세제|티슈|물티슈|발매트|양말|우산|마스크|슬리퍼|탈취|타올|수건|가방|생활|청소|빨청/],
+];
+function categorize(t){ t=String(t||""); for(const [c,re] of CATS) if(re.test(t)) return c; return ""; }
+const unionRect=rs=>({x0:Math.min(...rs.map(r=>r.x0)),y0:Math.min(...rs.map(r=>r.y0)),x1:Math.max(...rs.map(r=>r.x1)),y1:Math.max(...rs.map(r=>r.y1))});
+const areaOf=b=>(b.x1-b.x0)*(b.y1-b.y0);
+
+// 업체 자료: 한 쪽 = 상품 하나. 제목·항목명으로 칸을 채운다
+// 항목 제목 줄(예: "제품 인쇄 및 포장")과 "이름 : 값" 줄의 이름을 알아본다
+const HEADS=[
+  ["comp",/^(제품|상품)?\s*구성(품)?\s*$/],
+  ["color",/^(제품|상품)?\s*(색상|컬러|칼라)/],
+  ["print",/^(제품|상품)?\s*(인쇄|포장|로고)/],
+  ["price",/^(단가|가격|공급가|납품가|판매가|원가)/],
+  ["desc",/^(제품|상품)?\s*(관련\s*내용|설명|사양|스펙|상세|특징|규격|사이즈|크기|재질|소재|용량|중량|입수|원산지|최소|MOQ)/i],
+];
+function findSinglePageProduct(pg,body){
+  if(!body.length&&!pg.images.length) return [];
+  const p={comp:[],color:[],print:[],desc:[],price:[]};
+  let name="";
+  const cand=body.filter(l=>!isPrice(l)&&!/^[\d●■◆▶]/.test(l.text)&&l.text.length>=2&&l.text.length<=45);
+  let nameTop=-1;
+  if(cand.length){ const mx=Math.max(...cand.map(l=>l.size)); const nl=cand.filter(l=>l.size>=mx-0.5).sort((a,b)=>a.top-b.top)[0]; name=nl.text; nameTop=nl.top; }
+  let mode="desc";
+  for(const l of [...body].sort((a,b)=>a.top-b.top||a.x0-b.x0)){
+    if(l.text===name||l.top<nameTop-2) continue;   // 상품명 위쪽 머리글(업체명·쪽 제목)은 빼기
+    const t=l.text.replace(/^[•·\-|▶■●◆]\s*/,"");
+    const lab=t.match(/^([^:：]{1,10})\s*[:：]\s*(.+)$/);
+    const head=HEADS.find(([,re])=>re.test(lab?lab[1].trim():t));
+    if(head&&!lab&&t.length<=14){ mode=head[0]; continue; }       // 항목 제목 줄
+    if(head&&lab){ const k=head[0]; p[k].push(k==="desc"||k==="color"?t:lab[2].trim()); continue; }
+    if(isPrice(l)){ p.price.push(t); continue; }
+    p[mode].push(t);
+  }
+  const priceLine=p.price.find(s=>num(s)>=10&&/\d\s*원|^[\d,]+$/.test(s.replace(/\s/g,"")))||"";
+  return [{
+    name, comp:p.comp.join(", "), color:p.color.join("\n"), print:p.print.join(", "),
+    desc:cleanDesc(p.desc,[],[name]),
+    priceText:priceLine?(/원/.test(priceLine)?priceLine:priceLine+"원"):"", cost:priceLine?num(priceLine):null,
+    images:pg.images.map((im,i)=>i).sort((a,b)=>areaOf(pg.images[b])-areaOf(pg.images[a])).slice(0,4),
+  }];
+}
+
+/* ---------------- 쪽 보기 ---------------- */
+function buildThumbs(){
+  const box=$("#thumbs"); box.innerHTML="";
+  let lastFile=null;
+  state.pages.forEach((pg,i)=>{
+    const d=document.createElement("div"); d.className="th"; d.dataset.i=i;
+    const label=(pg.file!==lastFile&&new Set(state.pages.map(p=>p.file)).size>1?`<div style="font-weight:700;color:var(--text);word-break:break-all">${esc(pg.file.slice(0,14))}</div>`:"")+`${pg.num}`;
+    lastFile=pg.file;
+    if(pg.kind==="image"){ d.innerHTML=`<img src="${pg.src}">${label}`; }
+    else { d.innerHTML=`<canvas></canvas>${label}`; }
+    d.onclick=()=>showPage(i);
+    box.appendChild(d);
+  });
+  const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ io.unobserve(e.target); drawThumb(+e.target.dataset.i,e.target.querySelector("canvas")); } }),{root:box});
+  box.querySelectorAll(".th").forEach(el=>{ if(el.querySelector("canvas")) io.observe(el); });
+}
+async function drawThumb(i,cv){
+  const pg=state.pages[i];
+  if(pg.kind==="pdf"){ const page=await pg.doc.getPage(pg.num); const vp=page.getViewport({scale:80/page.getViewport({scale:1}).width});
+    cv.width=vp.width; cv.height=vp.height; await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise; }
+  else if(pg.kind==="pptx") drawPptx(pg,cv,80);
+}
+function drawPptx(pg,cv,width){
+  const s=width/pg.w; cv.width=width; cv.height=pg.h*s; const ctx=cv.getContext("2d"); ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+  for(const im of pg.images){ const el=new Image(); el.onload=()=>ctx.drawImage(el,im.x0*s,im.y0*s,(im.x1-im.x0)*s,(im.y1-im.y0)*s); el.src=im.data.url; }
+  ctx.fillStyle="#333"; ctx.textBaseline="top";
+  for(const l of pg.lines){ ctx.font=`${Math.max(6,l.size*s)}px sans-serif`; ctx.fillText(l.text,l.x0*s,l.top*s,(pg.w-l.x0)*s); }
+}
+
+let renderTask=null;
+async function showPage(i){
+  state.cur=i; const pg=state.pages[i];
+  document.querySelectorAll(".th").forEach(t=>t.classList.toggle("on",+t.dataset.i===i));
+  document.querySelector(`.th[data-i="${i}"]`)?.scrollIntoView({block:"nearest"});
+  await ensureParsed(pg);
+  dropRepeated(pg);
+  const area=$("#pageArea"), cv=$("#pageCanvas");
+  const width=Math.min(area.clientWidth-30,820), s=width/pg.w; pg.viewScale=s;
+  const dpr=window.devicePixelRatio||1;
+  if(renderTask){ renderTask.cancel(); renderTask=null; }   // 앞 쪽 그리기가 남아 있으면 멈춘다
+  if(pg.kind==="pdf"){
+    const page=pg.page; const vp=page.getViewport({scale:s*dpr});
+    cv.width=vp.width; cv.height=vp.height; cv.style.width=width+"px"; cv.style.height=pg.h*s+"px";
+    if(renderTask) renderTask.cancel();
+    renderTask=page.render({canvasContext:cv.getContext("2d"),viewport:vp});
+    renderTask.promise.catch(()=>{}); // 그리는 동안에도 상품 찾기는 먼저 보여준다
+  } else if(pg.kind==="pptx"){ drawPptx(pg,cv,width*dpr); cv.style.width=width+"px"; cv.style.height=pg.h*s+"px"; }
+  else { const im=new Image(); im.onload=()=>{ cv.width=width*dpr; cv.height=pg.h*s*dpr; cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height); }; im.src=pg.src; cv.style.width=width+"px"; cv.style.height=pg.h*s+"px"; }
+  const wrap=$("#pageWrap"); wrap.querySelectorAll(".ibox").forEach(b=>b.remove());
+  pg.images.forEach((im,k)=>{
+    const b=document.createElement("div"); b.className="ibox";
+    Object.assign(b.style,{left:im.x0*s+"px",top:im.y0*s+"px",width:(im.x1-im.x0)*s+"px",height:(im.y1-im.y0)*s+"px"});
+    b.onmousedown=e=>e.stopPropagation();
+    b.onclick=async()=>{ const p=selected(); if(!p) return toast("먼저 오른쪽에서 사진을 넣을 장을 누르세요"); p.photos.push(await imageOf(pg,im)); renderList(); toast("사진을 넣었어요"); };
+    wrap.appendChild(b);
+  });
+  // 자동으로 나눈 상품 구역을 페이지 위에 표시 (번호를 누르면 그 장으로)
+  wrap.querySelectorAll(".pbox").forEach(b=>b.remove());
+  findProducts(pg).forEach((x,k)=>{
+    if(!x.block) return;
+    const r=x.block, b=document.createElement("div"); b.className="pbox";
+    Object.assign(b.style,{left:(r.x0*s-3)+"px",top:(r.y0*s-3)+"px",width:((r.x1-r.x0)*s+6)+"px",height:((r.y1-r.y0)*s+6)+"px",borderColor:PCOL[k%PCOL.length]});
+    b.innerHTML=`<span style="background:${PCOL[k%PCOL.length]}" title="${esc(x.name)}">${k+1}</span>`;
+    b.querySelector("span").onclick=e=>{ e.stopPropagation(); if(x.pid){ state.sel=x.pid; renderList(); scrollToProduct(x.pid); } };
+    b.querySelector("span").onmousedown=e=>e.stopPropagation();
+    wrap.appendChild(b);
+  });
+  renderFound();
+}
+const PCOL=["#e8590c","#1c7ed6","#2b8a3e","#ae3ec9","#f08c00","#0c8599","#c2255c","#5c940d"];
+window.addEventListener("resize",()=>{ if(state.cur>=0) showPage(state.cur); });
+
+// 마우스로 네모를 그려 사진 잘라 넣기
+(function(){
+  const wrap=$("#pageWrap"), r=$("#cropRect"); let st=null;
+  wrap.addEventListener("mousedown",e=>{ if(e.button!==0) return; const b=wrap.getBoundingClientRect(); st={x:e.clientX-b.left,y:e.clientY-b.top}; Object.assign(r.style,{display:"block",left:st.x+"px",top:st.y+"px",width:0,height:0}); e.preventDefault(); });
+  window.addEventListener("mousemove",e=>{ if(!st) return; const b=wrap.getBoundingClientRect(); const x=Math.max(0,Math.min(b.width,e.clientX-b.left)),y=Math.max(0,Math.min(b.height,e.clientY-b.top));
+    Object.assign(r.style,{left:Math.min(x,st.x)+"px",top:Math.min(y,st.y)+"px",width:Math.abs(x-st.x)+"px",height:Math.abs(y-st.y)+"px"}); });
+  window.addEventListener("mouseup",async()=>{ if(!st) return; st=null;
+    const w=parseFloat(r.style.width),h=parseFloat(r.style.height),x=parseFloat(r.style.left),y=parseFloat(r.style.top); r.style.display="none";
+    if(w<15||h<15) return;
+    const p=selected(); if(!p) return toast("먼저 오른쪽에서 사진을 넣을 장을 누르세요");
+    const pg=state.pages[state.cur], s=pg.viewScale; const bb={x0:x/s,y0:y/s,x1:(x+w)/s,y1:(y+h)/s};
+    let cv;
+    if(pg.kind==="pdf") cv=await renderRegion(pg,bb,3);
+    else { const big=document.createElement("canvas"); if(pg.kind==="pptx"){ drawPptx(pg,big,pg.w*3); await new Promise(r=>setTimeout(r,150)); drawPptx(pg,big,pg.w*3); await new Promise(r=>setTimeout(r,150)); }
+      else { big.width=pg.w; big.height=pg.h; const im=new Image(); await new Promise(r=>{im.onload=r;im.src=pg.src;}); big.getContext("2d").drawImage(im,0,0); }
+      const k=big.width/pg.w; cv=document.createElement("canvas"); cv.width=(bb.x1-bb.x0)*k; cv.height=(bb.y1-bb.y0)*k; cv.getContext("2d").drawImage(big,-bb.x0*k,-bb.y0*k); }
+    p.photos.push(canvasToPhoto(cv)); renderList(); toast("잘라낸 사진을 넣었어요");
+  });
+})();
+
+function renderFound(){
+  const pg=state.pages[state.cur]; if(!pg) return;
+  const f=findProducts(pg), box=$("#found");
+  if(!f.length){ box.innerHTML=`<h3>이 쪽에서 찾은 상품 없음</h3><div class="hint">오른쪽 [+ 빈 장]으로 직접 넣고, 사진은 왼쪽에서 눌러 넣으세요.</div>`; return; }
+  box.innerHTML=`<h3>이 쪽에서 찾은 상품 ${f.length}개 <button class="small primary" id="addAllFound">모두 추가</button></h3>`+
+    f.map((x,i)=>`<div class="fitem ${x._added?"added":""}"><span class="n" title="${esc(x.name)}">${esc(x.name||"(이름 없음)")}</span><span class="p">${esc(x.priceText||"가격 없음")}</span><span class="hint">사진 ${x.images.length}</span><button class="small" data-f="${i}">${x._added?"다시 추가":"추가"}</button></div>`).join("")+
+    `<div class="hint" style="margin-top:6px">${state.mode==="vendor"?"찾은 가격은 <b>원가</b>로 들어가고 마진을 붙여 단가가 됩니다.":"책자 가격이 <b>단가로 그대로</b> 들어갑니다 (마진 없음)."} 자동으로 읽은 내용이라 오른쪽에서 한 번 확인하세요.</div>`;
+  box.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>addFound(pg,[f[+b.dataset.f]]));
+  $("#addAllFound").onclick=()=>addFound(pg,f.filter(x=>!x._added));
+}
+const NAVY="292943", TEAL="4AB0B2", GRAY="7F7F7F", LINEC="D9D9D9";
+const BOLD="Pretendard ExtraBold", BODY="Pretendard Medium";
+const PANEL_TOP=1.52, PANEL_BOTTOM=7.24, TXT_X=7.56, TXT_W=4.85;
+const lines=s=>String(s||"").split(/\n/).map(x=>x.trim()).filter(Boolean);
+function textW(s,size){ let w=0; for(const ch of s) w+=ch.charCodeAt(0)>0x2E80?0.95:(ch===" "?0.3:0.55); return w*size/72; }
+const wrapCount=(ls,size,width)=>ls.reduce((n,l)=>n+Math.max(1,Math.ceil(textW(l,size)/width)),0);
+const priceKey=p=>{ const n=num(p.price); return n==null?Infinity:n; };
+
+
+async function addFound(pg,list,{quiet=false}={}){
+  if(!list.length){ if(!quiet) toast("이미 모두 추가했어요"); return; }
+  if(!quiet) busy(true,"사진 꺼내는 중…");
+  let last;
+  for(const x of list){
+    const photos=[]; for(const i of x.images){ try{ photos.push(await imageOf(pg,pg.images[i])); }catch(e){ console.warn(e); } }
+    const p=newProduct({name:x.name,comp:x.comp,color:x.color||"",print:x.print||"",desc:x.desc,photos,
+      cat:x.cat||categorize(x.name)||"기타", found:{priceText:x.priceText||"",cost:x.cost||null}});
+    applyMode(p);
+    state.products.push(p); x._added=true; x.pid=p.id; last=p;
+  }
+  if(quiet) return;
+  busy(false);
+  state.sel=last.id; renderList(); renderFound(); scrollToProduct(last.id);
+  toast(`${list.length}개 추가했어요`);
+}
+
+// 넣자마자 모든 쪽에서 상품을 찾아 제안서를 바로 만든다 (월간지·원청 자료 공통)
+async function autoExtract(start){
+  const pgs=state.pages.slice(start);
+  busy(true,"자료 읽는 중…");
+  for(const pg of pgs) await ensureParsed(pg);
+  let n=0;
+  for(const [k,pg] of pgs.entries()){
+    busy(true,`상품 찾는 중… (${k+1}/${pgs.length}쪽)`);
+    dropRepeated(pg);
+    const f=findProducts(pg).filter(x=>!x._added&&(x.cost||x.priceText)); // 가격이 있는 것만 상품으로 본다
+    await addFound(pg,f,{quiet:true}); n+=f.length;
+  }
+  busy(false);
+  sortByPrice(); renderList(); renderFound();
+  toast(n?`상품 ${n}개로 제안서를 만들었어요. ${state.mode==="vendor"?"원가·마진·내용을":"내용을"} 확인하세요`:"자동으로 찾은 상품이 없어요. 왼쪽에서 직접 추가하세요");
+}
+
+/* ---------------- 상품 ---------------- */
+function newProduct(o={}){
+  return {id:state.seq++,name:"",comp:"",color:"",print:"",desc:"",cost:"",margin:+$("#margin").value||0,price:"",photos:[],src:state.mode||"vendor",...o};
+}
+// 월간지 상품은 마진을 절대 붙이지 않는다. 원청 상품만 원가 × (1+마진).
+function applyMode(p){
+  p.src=state.mode||"vendor";
+  if(p.src==="vendor"){
+    if(!num(p.cost)&&p.found&&p.found.cost) p.cost=p.found.cost;
+    if(num(p.cost)) p.price=calcPrice(p);
+  } else {
+    p.price=(p.found&&p.found.priceText)||p.price;
+  }
+}
+const selected=()=>state.products.find(p=>p.id===state.sel);
+const fmtWon=n=>Number(n).toLocaleString("ko-KR")+"원";
+function calcPrice(p){
+  const c=num(p.cost); if(!c) return p.price;
+  const unit=+$("#round").value||1;
+  return fmtWon(Math.ceil(Math.round(c*(1+(+p.margin||0)/100)*100)/100/unit)*unit);
+}
+function sortByPrice(){ state.products.sort((a,b)=>priceKey(a)-priceKey(b)); }
+function scrollToProduct(id){ document.querySelector(`.item[data-id="${id}"]`)?.scrollIntoView({block:"nearest",behavior:"smooth"}); }
+
+$("#addBlank").onclick=()=>{ const p=newProduct(); state.products.push(p); state.sel=p.id; renderList(); scrollToProduct(p.id); document.querySelector(`.item[data-id="${p.id}"] .s-title`)?.focus(); };
+$("#clearAll").onclick=()=>{ if(!state.products.length||!confirm("제안서의 모든 장을 지울까요?")) return; state.products=[]; state.sel=null; state.pages.forEach(p=>(p.found||[]).forEach(f=>f._added=false)); renderList(); renderFound(); };
+$("#sortBtn").onclick=()=>{ sortByPrice(); renderList(); toast("싼 순서로 정렬했어요"); };
+// 위쪽 기본 마진을 바꾸면 원청 상품 전체에 바로 반영
+$("#margin").addEventListener("input",()=>{ const m=+$("#margin").value||0; state.products.forEach(p=>{ if(p.src==="vendor"){ p.margin=m; if(num(p.cost)) p.price=calcPrice(p); } }); renderList(); });
+$("#round").onchange=()=>{ state.products.forEach(p=>{ if(p.src==="vendor"&&num(p.cost)) p.price=calcPrice(p); }); renderList(); };
+
+/* ---------------- 미리보기 (PPT와 같은 모양) ---------------- */
+const IN=v=>(v*7.5).toFixed(3)+"cqw";   // 슬라이드 너비 13.333인치 = 100cqw
+const SECS=[
+  ["comp","제품 구성","예: 카드지갑, 플라스틱케이스"],
+  ["color","제품 색상","예: 색상 : 블랙, 그레이"],
+  ["print","제품 인쇄 및 포장","예: 실크인쇄, 박인쇄"],
+  ["desc","제품 관련 내용","한 줄에 하나씩 (규격 : 115mm * 70mm)"],
+  ["price","단가","예: 2,500원"],
+];
+const IMG_BOX={x:0.6,y:1.65,w:6.35,h:5.3};
+function photoRects(ph){
+  ph=ph.slice(0,4); if(!ph.length) return [];
+  const {x:BX,y:BY,w:BW,h:BH}=IMG_BOX, G=0.15, n=ph.length; let best=null;
+  for(let cols=1;cols<=n;cols++){ const rows=Math.ceil(n/cols), cw=(BW-G*(cols-1))/cols, ch=(BH-G*(rows-1))/rows;
+    const area=ph.reduce((a,q)=>{const k=Math.min(cw/q.w,ch/q.h);return a+q.w*k*q.h*k;},0);
+    if(!best||area>best.area) best={area,cols,cw,ch}; }
+  return ph.map((q,i)=>{ const r=Math.floor(i/best.cols), c=i%best.cols, inRow=Math.min(best.cols,n-r*best.cols);
+    const off=(best.cols-inRow)*(best.cw+G)/2, k=Math.min(best.cw/q.w,best.ch/q.h), w=q.w*k, h=q.h*k;
+    return {x:BX+off+c*(best.cw+G)+(best.cw-w)/2, y:BY+r*(best.ch+G)+(best.ch-h)/2, w, h}; });
+}
+
+function slideHTML(p,i){
+  const vendor=p.src==="vendor", rects=photoRects(p.photos);
+  const secs=SECS.map(([k,h,ph],j)=>`${j?'<div class="s-sep"></div>':""}<div class="s-sec ${String(p[k]||"").trim()?"":"blank"}" data-sec="${k}"><span class="s-dot"></span><div class="s-head">${h}</div><div class="s-body" contenteditable="plaintext-only" spellcheck="false" data-k="${k}" data-ph="${ph}">${esc(p[k])}</div></div>`).join("");
+  const photos=p.photos.slice(0,4).map((q,k)=>{ const r=rects[k];
+    return `<div class="s-ph" style="left:${IN(r.x)};top:${IN(r.y)};width:${IN(r.w)};height:${IN(r.h)}"><img src="${q.url}" alt=""><button data-act="rmph" data-k="${k}" title="사진 빼기">×</button></div>`; }).join("");
+  const noph=p.photos.length?"":`<div class="s-noph" style="left:${IN(IMG_BOX.x)};top:${IN(IMG_BOX.y)};width:${IN(IMG_BOX.w)};height:${IN(IMG_BOX.h)}">사진 없음<small>이 장을 고른 뒤 왼쪽 자료의 사진을 누르거나<br>아래 [사진 파일]을 누르세요</small></div>`;
+  const money=vendor?`
+      <label>원가 <input data-m="cost" inputmode="numeric" value="${num(p.cost)?Number(num(p.cost)).toLocaleString("ko-KR"):""}" placeholder="원청 가격"></label>
+      <span class="op">+ 마진</span>
+      <label><input data-m="margin" type="number" value="${esc(p.margin)}">%</label>
+      <span class="op">=</span>
+      <span class="calc">단가 <b data-calc>${esc(p.price)||"-"}</b></span>`
+    :`<label>단가 <input data-m="price" value="${esc(p.price)}" placeholder="예: 2,500원"></label>
+      <span class="tag">월간지 가격 그대로 (마진 없음)</span>`;
+  return `<div class="item ${p.id===state.sel?"sel":""}" data-id="${p.id}">
+    <div class="slide">
+      <div class="s-bar"></div><img class="s-logo" src="${LOGO}" alt="">
+      <div class="s-title" contenteditable="plaintext-only" spellcheck="false" data-k="name" data-ph="상품명을 입력하세요">${esc(p.name)}</div>
+      <div class="s-panel">${secs}</div>
+      <div class="s-bottom"></div>${photos}${noph}
+      <div class="s-over">글이 길어서 PPT에서는 글자가 조금 작아지거나 마지막 줄이 빠져요</div>
+    </div>
+    <div class="sbar"><b class="no">${i+1}</b>${p.cat?`<span class="cat">${esc(p.cat)}</span>`:""}${money}<span class="sp"></span>
+      <button class="small" data-act="one" title="이 장만 PPT로 내려받기">⬇ 이 장만 받기</button>
+      <button class="small" data-act="addph">사진 파일</button>
+      <button class="small ghost" data-act="up" title="앞으로">▲</button><button class="small ghost" data-act="down" title="뒤로">▼</button>
+      <button class="small ghost" data-act="del">삭제</button></div>
+  </div>`;
+}
+
+function checkOverflow(item){
+  const sl=item.querySelector(".slide"), pn=item.querySelector(".s-panel");
+  const limit=sl.clientWidth*(PANEL_BOTTOM-PANEL_TOP)/13.333;
+  sl.classList.toggle("over",pn.scrollHeight>limit+1);
+}
+
+// 필터: 카테고리·가격·상품명 (보이는 장만 PPT로 만든다)
+const filt={cat:"",min:null,max:null,q:""};
+const isVisible=p=>{
+  if(filt.cat&&p.cat!==filt.cat) return false;
+  const v=priceKey(p);
+  if(filt.min!=null&&!(v>=filt.min)) return false;
+  if(filt.max!=null&&!(v<=filt.max)) return false;
+  if(filt.q&&!p.name.toLowerCase().includes(filt.q)) return false;
+  return true;
+};
+const visibleProducts=()=>state.products.filter(isVisible);
+function refreshCats(){
+  const sel=$("#fCat"), cnt={};
+  state.products.forEach(p=>{ if(p.cat) cnt[p.cat]=(cnt[p.cat]||0)+1; });
+  const cats=Object.keys(cnt);
+  sel.innerHTML=`<option value="">전체</option>`+cats.map(c=>`<option value="${esc(c)}">${esc(c)} (${cnt[c]})</option>`).join("");
+  if(filt.cat&&!cnt[filt.cat]) filt.cat="";
+  sel.value=filt.cat;
+  sel.parentElement.style.display=cats.length?"":"none";
+}
+$("#fCat").onchange=e=>{ filt.cat=e.target.value; renderList(); };
+const numIn=v=>{ const n=num(v); return n==null?null:n; };
+$("#fMin").addEventListener("input",e=>{ filt.min=numIn(e.target.value); renderList(); });
+$("#fMax").addEventListener("input",e=>{ filt.max=numIn(e.target.value); renderList(); });
+$("#fQ").addEventListener("input",e=>{ filt.q=e.target.value.trim().toLowerCase(); renderList(); });
+$("#fReset").onclick=()=>{ Object.assign(filt,{cat:"",min:null,max:null,q:""}); $("#fMin").value=$("#fMax").value=$("#fQ").value=""; renderList(); };
+
+function renderList(){
+  const L=$("#list"), vis=visibleProducts(), filtered=vis.length!==state.products.length;
+  $("#count").textContent=state.products.length?(filtered?`${vis.length}장 / 전체 ${state.products.length}장`:state.products.length+"장"):"";
+  $("#filters").classList.toggle("on",state.products.length>0);
+  refreshCats();
+  $("#fInfo").innerHTML=filtered?`<b>${vis.length}장</b>만 보이고, 보이는 장만 PPT로 만들어져요`:"";
+  if(state.products.length&&!vis.length){ L.innerHTML=`<div class="empty">조건에 맞는 상품이 없어요. 필터를 바꿔 보세요.</div>`; return; }
+  if(!state.products.length){
+    L.innerHTML=`<div class="empty">${state.mode==="monthly"?"자동으로 찾은 상품이 없어요.<br>왼쪽 자료에서 [추가]하거나 [+ 빈 장]으로 직접 넣으세요.":"월간지나 원청 제안서를 넣으면 여기에 제안서가 바로 만들어집니다.<br>월간지는 책자 가격 그대로, 원청 자료는 원가에 마진을 붙입니다."}</div>`;
+    return;
+  }
+  L.innerHTML=vis.map(slideHTML).join("");
+  L.querySelectorAll(".item").forEach(item=>{
+    const p=state.products.find(x=>x.id===+item.dataset.id);
+    item.addEventListener("mousedown",()=>{ if(state.sel!==p.id){ state.sel=p.id; L.querySelectorAll(".item").forEach(c=>c.classList.toggle("sel",c===item)); } });
+    // 슬라이드 위 글자를 바로 고친다
+    item.querySelectorAll("[data-k]").forEach(el=>{
+      el.addEventListener("input",()=>{
+        const k=el.dataset.k; p[k]=el.innerText.replace(/\n+$/,"");
+        el.closest(".s-sec")?.classList.toggle("blank",!p[k].trim());
+        if(k==="price"){ const c=item.querySelector("[data-calc]"); if(c) c.textContent=p.price||"-"; const pi=item.querySelector('[data-m="price"]'); if(pi) pi.value=p.price; }
+        checkOverflow(item);
+      });
+      el.addEventListener("paste",e=>{ e.preventDefault(); document.execCommand("insertText",false,e.clipboardData.getData("text/plain")); });
+      if(el.dataset.k==="name") el.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); el.blur(); } });
+      if(el.dataset.k==="price") el.addEventListener("blur",()=>{ if(/^\s*[\d,]+\s*$/.test(el.innerText)){ p.price=fmtWon(num(el.innerText)); el.innerText=p.price; } });
+    });
+    // 원가·마진을 바꾸면 슬라이드의 단가가 바로 바뀐다
+    item.querySelectorAll("[data-m]").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        if(inp.dataset.m==="price"){ p.price=inp.value; const b=item.querySelector('.s-body[data-k="price"]'); b.innerText=p.price; b.closest(".s-sec").classList.toggle("blank",!p.price.trim()); return; }
+        if(inp.dataset.m==="cost") p.cost=inp.value; else p.margin=inp.value;
+        if(num(p.cost)){ p.price=calcPrice(p);
+          const b=item.querySelector('.s-body[data-k="price"]'); b.innerText=p.price; b.closest(".s-sec").classList.remove("blank");
+          item.querySelector("[data-calc]").textContent=p.price; }
+      });
+      if(inp.dataset.m==="cost") inp.addEventListener("blur",()=>{ if(num(p.cost)) inp.value=Number(num(p.cost)).toLocaleString("ko-KR"); });
+      if(inp.dataset.m==="price") inp.addEventListener("blur",()=>{ if(/^\s*[\d,]+\s*$/.test(inp.value)){ p.price=fmtWon(num(inp.value)); inp.value=p.price; item.querySelector('.s-body[data-k="price"]').innerText=p.price; } });
+    });
+    item.querySelectorAll("[data-act]").forEach(b=>b.onclick=e=>{
+      e.stopPropagation(); const a=b.dataset.act, i=state.products.indexOf(p);
+      if(a==="del"){ state.products.splice(i,1); if(state.sel===p.id) state.sel=null; }
+      else if(a==="up"&&i>0) [state.products[i-1],state.products[i]]=[state.products[i],state.products[i-1]];
+      else if(a==="down"&&i<state.products.length-1) [state.products[i+1],state.products[i]]=[state.products[i],state.products[i+1]];
+      else if(a==="rmph") p.photos.splice(+b.dataset.k,1);
+      else if(a==="addph"){ state.sel=p.id; $("#photoFile").click(); return; }
+      else if(a==="one"){ downloadOne(p); return; }
+      renderList();
+    });
+  });
+  requestAnimationFrame(()=>L.querySelectorAll(".item").forEach(checkOverflow));
+}
+$("#photoFile").onchange=async e=>{
+  const p=selected(); if(!p) return;
+  for(const f of e.target.files){ const src=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);}); try{ p.photos.push(await loadPhoto(src)); }catch(err){ toast(err.message); } }
+  e.target.value=""; renderList();
+};
+window.addEventListener("resize",()=>document.querySelectorAll(".item").forEach(checkOverflow));
+renderList();
+
+/* ---------------- PPT 만들기 (네오다임 양식) ---------------- */
+$("#makeBtn").onclick=async()=>{
+  const items=visibleProducts().filter(p=>p.name.trim());
+  if(!items.length) return toast("상품명이 있는 장이 없어요");
+  const noPrice=items.filter(p=>!String(p.price).trim()).map(p=>p.name);
+  if(noPrice.length&&!confirm(`단가가 비어 있는 상품이 ${noPrice.length}개 있어요:\n${noPrice.slice(0,5).join("\n")}\n\n그대로 만들까요?`)) return;
+  busy(true,"PPT 만드는 중…");
+  try{
+    const pres=new PptxGenJS(); pres.layout="LAYOUT_WIDE"; pres.company="누구나기프트";
+    for(const p of items) addSlide(pres,p);   // 미리보기 순서 그대로
+    const title=($("#title").value.trim()||"상품").replace(/[\\/:*?"<>|]/g,"");
+    await pres.writeFile({fileName:`[누구나기프트] ${title} 제안서.pptx`});
+    toast(`${items.length}장짜리 제안서를 내려받았어요`);
+  }catch(e){ console.error(e); toast("만드는 중 문제가 생겼어요: "+e.message); }
+  busy(false);
+};
+
+// 한 장만 PPT로
+async function downloadOne(p){
+  if(!p.name.trim()) return toast("상품명을 먼저 넣어 주세요");
+  try{
+    const pres=new PptxGenJS(); pres.layout="LAYOUT_WIDE"; pres.company="누구나기프트";
+    addSlide(pres,p);
+    await pres.writeFile({fileName:`[누구나기프트] ${p.name.trim().replace(/[\\/:*?"<>|]/g,"").slice(0,60)}.pptx`});
+    toast("이 장만 내려받았어요");
+  }catch(e){ console.error(e); toast("만드는 중 문제가 생겼어요: "+e.message); }
+}
+function addSlide(pres,p){
+  const s=pres.addSlide(); s.background={color:"FFFFFF"};
+  s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:13.333,h:0.397,fill:{color:NAVY},line:{color:NAVY,width:0}});
+  s.addImage({data:LOGO,x:11.83,y:0.61,w:1.0,h:1.05});
+  s.addShape(pres.shapes.LINE,{x:7.66,y:PANEL_BOTTOM,w:5.0,h:0,line:{color:LINEC,width:0.75}});
+  const name=p.name.trim(), tsize=textW(name,24)<=10.6?24:20;
+  s.addText(name,{x:0.69,y:0.91,w:10.9,h:0.5,fontFace:BOLD,fontSize:tsize,color:NAVY,valign:"top",isTextBox:true});
+
+  let secs=SECS.map(([k,h])=>[h,lines(p[k])]).filter(([,b])=>b.length);
+  const height=sz=>secs.reduce((t,[,b])=>t+0.37+wrapCount(b,sz,TXT_W-0.2)*sz*1.2*1.3/72+0.1+0.23,0);
+  let size=11; if(height(size)>PANEL_BOTTOM-PANEL_TOP) size=10;
+  while(height(size)>PANEL_BOTTOM-PANEL_TOP){ const i=secs.findIndex(([h])=>h==="제품 관련 내용"); if(i<0||secs[i][1].length<=1) break; secs[i]=[secs[i][0],secs[i][1].slice(0,-1)]; }
+  const lh=size*1.2*1.3/72; let y=PANEL_TOP;
+  secs.forEach(([head,body],i)=>{
+    s.addShape(pres.shapes.OVAL,{x:7.52,y:y+0.13,w:0.087,h:0.087,fill:{color:TEAL},line:{color:TEAL,width:0}});
+    s.addText(head,{x:TXT_X,y,w:TXT_W,h:0.37,fontFace:BOLD,fontSize:16,color:NAVY,valign:"top",isTextBox:true});
+    const h=wrapCount(body,size,TXT_W-0.2)*lh+0.1;
+    s.addText(body.map((t,k)=>({text:t,options:{breakLine:k<body.length-1}})),{x:TXT_X,y:y+0.37,w:TXT_W,h,fontFace:BODY,fontSize:size,color:GRAY,valign:"top",lineSpacingMultiple:1.3,isTextBox:true});
+    y+=0.37+h+0.1;
+    if(i<secs.length-1){ s.addShape(pres.shapes.LINE,{x:7.66,y,w:5.0,h:0,line:{color:LINEC,width:0.75}}); y+=0.13; }
+  });
+  const rects=photoRects(p.photos);
+  p.photos.slice(0,4).forEach((q,i)=>s.addImage({data:q.url,...rects[i]}));
+}
+</script>
+</body>
+</html>
