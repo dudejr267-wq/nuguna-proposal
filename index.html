@@ -121,7 +121,7 @@ main{display:grid;grid-template-columns:minmax(0,.9fr) minmax(480px,1.25fr);gap:
   <h1>누구나기프트 제안서 만들기</h1>
   <label>제안서 이름 <input id="title" placeholder="예: 네오다임"></label>
   <span id="vendorCtl" style="display:none;gap:14px;align-items:center">
-    <label title="원청 자료 상품 전체에 바로 적용됩니다">기본 마진 <input id="margin" type="number" value="25" min="0" step="1">%</label>
+    <label title="판매가 기준 마진입니다. 단가 = 원가 ÷ (1 − 마진%). 원청 자료 상품 전체에 바로 적용됩니다">기본 마진 <input id="margin" type="number" value="30" min="0" max="95" step="1">%</label>
     <label>단가 올림 <select id="round"><option value="1">1원</option><option value="10">10원</option><option value="100" selected>100원</option><option value="1000">1,000원</option></select></label>
   </span>
   <span class="sp"></span>
@@ -818,7 +818,7 @@ async function autoExtract(start){
 function newProduct(o={}){
   return {id:state.seq++,name:"",comp:"",color:"",print:"",desc:"",cost:"",margin:+$("#margin").value||0,price:"",photos:[],src:state.mode||"vendor",...o};
 }
-// 월간지 상품은 마진을 절대 붙이지 않는다. 원청 상품만 원가 × (1+마진).
+// 월간지 상품은 마진을 절대 붙이지 않는다. 원청 상품만 원가 ÷ (1−마진).
 function applyMode(p){
   p.src=state.mode||"vendor";
   if(p.src==="vendor"){
@@ -833,7 +833,9 @@ const fmtWon=n=>Number(n).toLocaleString("ko-KR")+"원";
 function calcPrice(p){
   const c=num(p.cost); if(!c) return p.price;
   const unit=+$("#round").value||1;
-  return fmtWon(Math.ceil(Math.round(c*(1+(+p.margin||0)/100)*100)/100/unit)*unit);
+  // 판매가 기준 마진: 단가 = 원가 ÷ (1 − 마진%)  예) 마진 30% → 원가 ÷ 0.7
+  const m=Math.min(Math.max(+p.margin||0,0),95)/100;
+  return fmtWon(Math.ceil(Math.round(c/(1-m)*100)/100/unit)*unit);
 }
 function sortByPrice(){ state.products.sort((a,b)=>priceKey(a)-priceKey(b)); }
 function scrollToProduct(id){ document.querySelector(`.item[data-id="${id}"]`)?.scrollIntoView({block:"nearest",behavior:"smooth"}); }
@@ -874,8 +876,8 @@ function slideHTML(p,i){
   const noph=p.photos.length?"":`<div class="s-noph" style="left:${IN(IMG_BOX.x)};top:${IN(IMG_BOX.y)};width:${IN(IMG_BOX.w)};height:${IN(IMG_BOX.h)}">사진 없음<small>이 장을 고른 뒤 왼쪽 자료의 사진을 누르거나<br>아래 [사진 파일]을 누르세요</small></div>`;
   const money=vendor?`
       <label>원가 <input data-m="cost" inputmode="numeric" value="${num(p.cost)?Number(num(p.cost)).toLocaleString("ko-KR"):""}" placeholder="원청 가격"></label>
-      <span class="op">+ 마진</span>
-      <label><input data-m="margin" type="number" value="${esc(p.margin)}">%</label>
+      <span class="op">÷ (1 − 마진</span>
+      <label><input data-m="margin" type="number" min="0" max="95" value="${esc(p.margin)}">%)</label>
       <span class="op">=</span>
       <span class="calc">단가 <b data-calc>${esc(p.price)||"-"}</b></span>`
     :`<label>단가 <input data-m="price" value="${esc(p.price)}" placeholder="예: 2,500원"></label>
